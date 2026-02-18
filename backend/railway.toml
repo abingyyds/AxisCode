@@ -3,5 +3,6 @@ builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile"
 
 [deploy]
+startCommand = "sh -c 'npx drizzle-kit migrate && node dist/index.js'"
 healthcheckPath = "/health"
 restartPolicyType = "ON_FAILURE"
