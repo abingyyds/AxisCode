@@ -4,21 +4,17 @@ import { apiFetch } from '@/lib/api';
 import Navbar from '@/components/layout/Navbar';
 
 export default function Settings() {
-  const [settings, setSettings] = useState({ hasAnthropicKey: false, hasRailwayToken: false });
+  const [settings, setSettings] = useState({ hasAnthropicKey: false });
   const [anthropicKey, setAnthropicKey] = useState('');
-  const [railwayToken, setRailwayToken] = useState('');
 
   useEffect(() => {
     apiFetch('/api/settings').then(setSettings).catch(() => {});
   }, []);
 
   const save = async () => {
-    const body: Record<string, string> = {};
-    if (anthropicKey) body.anthropicKey = anthropicKey;
-    if (railwayToken) body.railwayToken = railwayToken;
-    await apiFetch('/api/settings', { method: 'PATCH', body: JSON.stringify(body) });
+    if (!anthropicKey) return;
+    await apiFetch('/api/settings', { method: 'PATCH', body: JSON.stringify({ anthropicKey }) });
     setAnthropicKey('');
-    setRailwayToken('');
     apiFetch('/api/settings').then(setSettings);
   };
 
@@ -35,13 +31,7 @@ export default function Settings() {
             <input type="password" value={anthropicKey} onChange={e => setAnthropicKey(e.target.value)}
               placeholder="sk-ant-..." className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2" />
           </div>
-          <div>
-            <label className="block text-sm text-gray-400 mb-1">
-              Railway Token {settings.hasRailwayToken && '(configured)'}
-            </label>
-            <input type="password" value={railwayToken} onChange={e => setRailwayToken(e.target.value)}
-              placeholder="railway_..." className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2" />
-          </div>
+          <p className="text-xs text-gray-500">Railway tokens are now configured per-project in Project Settings.</p>
           <button onClick={save} className="bg-blue-600 px-4 py-2 rounded-lg hover:bg-blue-700">Save</button>
         </div>
       </main>

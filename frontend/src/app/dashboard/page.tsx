@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import { isLoggedIn } from '@/lib/auth';
+import { useWebSocket } from '@/hooks/useWebSocket';
 import Navbar from '@/components/layout/Navbar';
 import ProjectCard from '@/components/project/ProjectCard';
 import CreateProjectModal from '@/components/project/CreateProjectModal';
@@ -18,13 +19,25 @@ export default function Dashboard() {
   const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
   const [showCreate, setShowCreate] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+  const { lastMessage } = useWebSocket();
+
+  const reload = () => apiFetch('/api/projects').then(setProjects);
 
   useEffect(() => {
     if (!isLoggedIn()) { router.push('/'); return; }
-    apiFetch('/api/projects').then(setProjects).catch(() => {});
+    reload();
   }, [router]);
 
-  const reload = () => apiFetch('/api/projects').then(setProjects);
+  useEffect(() => {
+    if (!lastMessage) return;
+    const msg = lastMessage as { type: string; payload?: { projectName?: string } };
+    if (msg.type === 'invited') {
+      setToast(`You were invited to "${msg.payload?.projectName}"`);
+      reload();
+      setTimeout(() => setToast(null), 5000);
+    }
+  }, [lastMessage]);
 
   return (
     <div className="min-h-screen">
@@ -40,6 +53,11 @@ export default function Dashboard() {
           {projects.map(p => <ProjectCard key={p.id} project={p} />)}
         </div>
         {showCreate && <CreateProjectModal onClose={() => setShowCreate(false)} onCreated={reload} />}
+        {toast && (
+          <div className="fixed bottom-6 right-6 bg-blue-600 text-white px-4 py-3 rounded-lg shadow-lg animate-pulse">
+            {toast}
+          </div>
+        )}
       </main>
     </div>
   );

@@ -11,6 +11,7 @@ export default function Navbar() {
     <nav className="border-b border-gray-800 px-6 py-3 flex items-center justify-between">
       <Link href="/dashboard" className="text-xl font-bold">AxiSCode</Link>
       <div className="flex gap-4 items-center">
+        <Link href="/plaza" className="text-gray-400 hover:text-white text-sm">Plaza</Link>
         <Link href="/settings" className="text-gray-400 hover:text-white text-sm">Settings</Link>
         <button onClick={logout} className="text-gray-400 hover:text-white text-sm">Logout</button>
       </div>

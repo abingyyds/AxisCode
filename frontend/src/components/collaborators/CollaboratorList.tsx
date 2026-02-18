@@ -10,7 +10,7 @@ interface Collaborator {
   role: string;
 }
 
-export default function CollaboratorList({ projectId }: { projectId: string }) {
+export default function CollaboratorList({ projectId, isOwner }: { projectId: string; isOwner: boolean }) {
   const [collabs, setCollabs] = useState<Collaborator[]>([]);
 
   useEffect(() => {
@@ -31,7 +31,7 @@ export default function CollaboratorList({ projectId }: { projectId: string }) {
             <span>{c.username}</span>
             <span className="text-xs text-gray-500">{c.role}</span>
           </div>
-          {c.role !== 'owner' && (
+          {isOwner && c.role !== 'owner' && (
             <button onClick={() => remove(c.userId)} className="text-red-400 text-sm hover:text-red-300">Remove</button>
           )}
         </div>

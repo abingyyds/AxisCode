@@ -1,5 +1,5 @@
 import { spawn, ChildProcess } from 'child_process';
-import { broadcast } from '../ws/handler.js';
+import { broadcastToProject } from '../ws/handler.js';
 import { db } from '../db/client.js';
 import { agentLogs } from '../db/schema.js';
 
@@ -8,6 +8,7 @@ const runningProcesses = new Map<string, ChildProcess>();
 export function spawnAgent(opts: {
   taskId: string;
   userId: string;
+  projectId: string;
   workspacePath: string;
   instruction: string;
   anthropicKey?: string;
@@ -26,7 +27,7 @@ export function spawnAgent(opts: {
     const handleOutput = (logType: 'stdout' | 'stderr') => (data: Buffer) => {
       const content = data.toString();
       db.insert(agentLogs).values({ taskId: opts.taskId, content, logType }).catch(() => {});
-      broadcast(opts.userId, { type: 'agent_log', taskId: opts.taskId, payload: { content, logType } });
+      broadcastToProject(opts.projectId, { type: 'agent_log', taskId: opts.taskId, payload: { content, logType } });
     };
 
     proc.stdout?.on('data', handleOutput('stdout'));

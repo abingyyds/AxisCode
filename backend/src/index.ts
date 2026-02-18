@@ -9,6 +9,7 @@ import taskRoutes from './routes/tasks.js';
 import collaboratorRoutes from './routes/collaborators.js';
 import settingsRoutes from './routes/settings.js';
 import webhookRoutes from './routes/webhooks.js';
+import plazaRoutes from './routes/plaza.js';
 import { rateLimit } from './middleware/rateLimit.js';
 import { createWorker } from './queue/setup.js';
 import { agentWorkerProcessor } from './queue/workers/agentWorker.js';
@@ -31,6 +32,7 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/collaborators', collaboratorRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/webhooks', webhookRoutes);
+app.use('/api/plaza', plazaRoutes);
 
 const server = createServer(app);
 setupWebSocket(server);

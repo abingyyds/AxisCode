@@ -1,0 +1,120 @@
+{
+  "id": "a1b2c3d4-5678-9012-abcd-ef1234567890",
+  "prevId": "3964676e-239d-4121-849e-71e100576211",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.agent_logs": {
+      "name": "agent_logs",
+      "schema": "",
+      "columns": {
+        "id": { "name": "id", "type": "uuid", "primaryKey": true, "notNull": true, "default": "gen_random_uuid()" },
+        "task_id": { "name": "task_id", "type": "uuid", "primaryKey": false, "notNull": true },
+        "content": { "name": "content", "type": "text", "primaryKey": false, "notNull": true },
+        "log_type": { "name": "log_type", "type": "varchar(20)", "primaryKey": false, "notNull": true, "default": "'stdout'" },
+        "created_at": { "name": "created_at", "type": "timestamp", "primaryKey": false, "notNull": true, "default": "now()" }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "agent_logs_task_id_tasks_id_fk": { "name": "agent_logs_task_id_tasks_id_fk", "tableFrom": "agent_logs", "tableTo": "tasks", "columnsFrom": ["task_id"], "columnsTo": ["id"], "onDelete": "no action", "onUpdate": "no action" }
+      },
+      "compositePrimaryKeys": {}, "uniqueConstraints": {}, "policies": {}, "checkConstraints": {}, "isRLSEnabled": false
+    },
+    "public.collaborators": {
+      "name": "collaborators",
+      "schema": "",
+      "columns": {
+        "id": { "name": "id", "type": "uuid", "primaryKey": true, "notNull": true, "default": "gen_random_uuid()" },
+        "project_id": { "name": "project_id", "type": "uuid", "primaryKey": false, "notNull": true },
+        "user_id": { "name": "user_id", "type": "uuid", "primaryKey": false, "notNull": true },
+        "role": { "name": "role", "type": "varchar(20)", "primaryKey": false, "notNull": true, "default": "'worker'" },
+        "invited_at": { "name": "invited_at", "type": "timestamp", "primaryKey": false, "notNull": true, "default": "now()" },
+        "accepted_at": { "name": "accepted_at", "type": "timestamp", "primaryKey": false, "notNull": false }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "collaborators_project_id_projects_id_fk": { "name": "collaborators_project_id_projects_id_fk", "tableFrom": "collaborators", "tableTo": "projects", "columnsFrom": ["project_id"], "columnsTo": ["id"], "onDelete": "no action", "onUpdate": "no action" },
+        "collaborators_user_id_users_id_fk": { "name": "collaborators_user_id_users_id_fk", "tableFrom": "collaborators", "tableTo": "users", "columnsFrom": ["user_id"], "columnsTo": ["id"], "onDelete": "no action", "onUpdate": "no action" }
+      },
+      "compositePrimaryKeys": {}, "uniqueConstraints": {}, "policies": {}, "checkConstraints": {}, "isRLSEnabled": false
+    },
+    "public.projects": {
+      "name": "projects",
+      "schema": "",
+      "columns": {
+        "id": { "name": "id", "type": "uuid", "primaryKey": true, "notNull": true, "default": "gen_random_uuid()" },
+        "name": { "name": "name", "type": "varchar(255)", "primaryKey": false, "notNull": true },
+        "github_repo_owner": { "name": "github_repo_owner", "type": "varchar(255)", "primaryKey": false, "notNull": true },
+        "github_repo_name": { "name": "github_repo_name", "type": "varchar(255)", "primaryKey": false, "notNull": true },
+        "github_repo_url": { "name": "github_repo_url", "type": "text", "primaryKey": false, "notNull": true },
+        "default_branch": { "name": "default_branch", "type": "varchar(100)", "primaryKey": false, "notNull": true, "default": "'main'" },
+        "railway_project_id": { "name": "railway_project_id", "type": "varchar(255)", "primaryKey": false, "notNull": false },
+        "railway_token": { "name": "railway_token", "type": "text", "primaryKey": false, "notNull": false },
+        "anthropic_key": { "name": "anthropic_key", "type": "text", "primaryKey": false, "notNull": false },
+        "owner_id": { "name": "owner_id", "type": "uuid", "primaryKey": false, "notNull": true },
+        "created_at": { "name": "created_at", "type": "timestamp", "primaryKey": false, "notNull": true, "default": "now()" },
+        "updated_at": { "name": "updated_at", "type": "timestamp", "primaryKey": false, "notNull": true, "default": "now()" }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "projects_owner_id_users_id_fk": { "name": "projects_owner_id_users_id_fk", "tableFrom": "projects", "tableTo": "users", "columnsFrom": ["owner_id"], "columnsTo": ["id"], "onDelete": "no action", "onUpdate": "no action" }
+      },
+      "compositePrimaryKeys": {}, "uniqueConstraints": {}, "policies": {}, "checkConstraints": {}, "isRLSEnabled": false
+    },
+    "public.tasks": {
+      "name": "tasks",
+      "schema": "",
+      "columns": {
+        "id": { "name": "id", "type": "uuid", "primaryKey": true, "notNull": true, "default": "gen_random_uuid()" },
+        "project_id": { "name": "project_id", "type": "uuid", "primaryKey": false, "notNull": true },
+        "user_id": { "name": "user_id", "type": "uuid", "primaryKey": false, "notNull": true },
+        "instruction": { "name": "instruction", "type": "text", "primaryKey": false, "notNull": true },
+        "status": { "name": "status", "type": "varchar(30)", "primaryKey": false, "notNull": true, "default": "'pending'" },
+        "branch_name": { "name": "branch_name", "type": "varchar(255)", "primaryKey": false, "notNull": false },
+        "pr_number": { "name": "pr_number", "type": "varchar(20)", "primaryKey": false, "notNull": false },
+        "pr_url": { "name": "pr_url", "type": "text", "primaryKey": false, "notNull": false },
+        "preview_url": { "name": "preview_url", "type": "text", "primaryKey": false, "notNull": false },
+        "agent_type": { "name": "agent_type", "type": "varchar(20)", "primaryKey": false, "notNull": false, "default": "'worker'" },
+        "error_message": { "name": "error_message", "type": "text", "primaryKey": false, "notNull": false },
+        "workspace_path": { "name": "workspace_path", "type": "text", "primaryKey": false, "notNull": false },
+        "created_at": { "name": "created_at", "type": "timestamp", "primaryKey": false, "notNull": true, "default": "now()" },
+        "updated_at": { "name": "updated_at", "type": "timestamp", "primaryKey": false, "notNull": true, "default": "now()" }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "tasks_project_id_projects_id_fk": { "name": "tasks_project_id_projects_id_fk", "tableFrom": "tasks", "tableTo": "projects", "columnsFrom": ["project_id"], "columnsTo": ["id"], "onDelete": "no action", "onUpdate": "no action" },
+        "tasks_user_id_users_id_fk": { "name": "tasks_user_id_users_id_fk", "tableFrom": "tasks", "tableTo": "users", "columnsFrom": ["user_id"], "columnsTo": ["id"], "onDelete": "no action", "onUpdate": "no action" }
+      },
+      "compositePrimaryKeys": {}, "uniqueConstraints": {}, "policies": {}, "checkConstraints": {}, "isRLSEnabled": false
+    },
+    "public.users": {
+      "name": "users",
+      "schema": "",
+      "columns": {
+        "id": { "name": "id", "type": "uuid", "primaryKey": true, "notNull": true, "default": "gen_random_uuid()" },
+        "github_id": { "name": "github_id", "type": "varchar(50)", "primaryKey": false, "notNull": true },
+        "username": { "name": "username", "type": "varchar(255)", "primaryKey": false, "notNull": true },
+        "email": { "name": "email", "type": "varchar(255)", "primaryKey": false, "notNull": false },
+        "avatar_url": { "name": "avatar_url", "type": "text", "primaryKey": false, "notNull": false },
+        "github_token": { "name": "github_token", "type": "text", "primaryKey": false, "notNull": false },
+        "anthropic_key": { "name": "anthropic_key", "type": "text", "primaryKey": false, "notNull": false },
+        "created_at": { "name": "created_at", "type": "timestamp", "primaryKey": false, "notNull": true, "default": "now()" },
+        "updated_at": { "name": "updated_at", "type": "timestamp", "primaryKey": false, "notNull": true, "default": "now()" }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "users_github_id_unique": { "name": "users_github_id_unique", "nullsNotDistinct": false, "columns": ["github_id"] }
+      },
+      "policies": {}, "checkConstraints": {}, "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": { "columns": {}, "schemas": {}, "tables": {} }
+}

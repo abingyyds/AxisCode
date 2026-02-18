@@ -14,3 +14,14 @@ export function auth(req: AuthRequest, res: Response, next: NextFunction) {
     res.status(401).json({ error: 'Invalid token' });
   }
 }
+
+export function optionalAuth(req: AuthRequest, _res: Response, next: NextFunction) {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  if (token) {
+    try {
+      const payload = jwt.verify(token, config.jwtSecret) as { userId: string };
+      req.userId = payload.userId;
+    } catch { /* ignore invalid token */ }
+  }
+  next();
+}
