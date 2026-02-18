@@ -54,6 +54,13 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     setActiveTask(task);
   };
 
+  const taskAction = async (action: string) => {
+    if (!activeTask) return;
+    const updated = await apiFetch(`/api/tasks/${activeTask.id}/${action}`, { method: 'POST' });
+    setActiveTask(prev => prev ? { ...prev, ...updated } : prev);
+    setTasks(prev => prev.map(t => t.id === updated.id ? { ...t, ...updated } : t));
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
@@ -68,6 +75,18 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
           </div>
           {activeTask && (
             <>
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-gray-400">[{activeTask.status}]</span>
+                {activeTask.status !== 'completed' && activeTask.status !== 'suspended' && (
+                  <button onClick={() => taskAction('complete')} className="bg-green-700 px-2 py-1 rounded hover:bg-green-600">Complete</button>
+                )}
+                {activeTask.status !== 'suspended' && activeTask.status !== 'completed' && (
+                  <button onClick={() => taskAction('suspend')} className="bg-yellow-700 px-2 py-1 rounded hover:bg-yellow-600">Suspend</button>
+                )}
+                {activeTask.status === 'suspended' && (
+                  <button onClick={() => taskAction('retry')} className="bg-blue-700 px-2 py-1 rounded hover:bg-blue-600">Resume</button>
+                )}
+              </div>
               <AgentTerminal taskId={activeTask.id} />
               {activeTask.railwayServiceId && <DeployPanel taskId={activeTask.id} />}
               {activeTask.previewUrl && <PreviewFrame url={activeTask.previewUrl} />}

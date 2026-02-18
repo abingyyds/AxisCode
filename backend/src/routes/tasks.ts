@@ -60,6 +60,26 @@ router.post('/:id/retry', auth, async (req: AuthRequest, res: Response) => {
   res.json(task);
 });
 
+router.post('/:id/complete', auth, async (req: AuthRequest, res: Response) => {
+  const [task] = await db.update(tasks)
+    .set({ status: 'completed', updatedAt: new Date() })
+    .where(eq(tasks.id, req.params.id as string))
+    .returning();
+  if (!task) return res.status(404).json({ error: 'Not found' });
+  broadcastToProject(task.projectId, { type: 'task_update', taskId: task.id, payload: { status: 'completed' } });
+  res.json(task);
+});
+
+router.post('/:id/suspend', auth, async (req: AuthRequest, res: Response) => {
+  const [task] = await db.update(tasks)
+    .set({ status: 'suspended', updatedAt: new Date() })
+    .where(eq(tasks.id, req.params.id as string))
+    .returning();
+  if (!task) return res.status(404).json({ error: 'Not found' });
+  broadcastToProject(task.projectId, { type: 'task_update', taskId: task.id, payload: { status: 'suspended' } });
+  res.json(task);
+});
+
 router.post('/:id/cancel', auth, async (req: AuthRequest, res: Response) => {
   cancelAgent(req.params.id as string);
   const [task] = await db.update(tasks)
