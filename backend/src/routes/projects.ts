@@ -1,11 +1,19 @@
 import { Router, Response } from 'express';
 import { eq, and } from 'drizzle-orm';
 import { db } from '../db/client.js';
-import { projects, collaborators } from '../db/schema.js';
+import { projects, collaborators, users } from '../db/schema.js';
 import { auth } from '../middleware/auth.js';
 import { AuthRequest } from '../types/index.js';
+import { listRepos } from '../services/github.js';
 
 const router = Router();
+
+router.get('/github-repos', auth, async (req: AuthRequest, res: Response) => {
+  const [user] = await db.select().from(users).where(eq(users.id, req.userId!));
+  if (!user?.githubToken) return res.status(400).json({ error: 'No GitHub token' });
+  const repos = await listRepos(user.githubToken);
+  res.json(repos);
+});
 
 router.get('/', auth, async (req: AuthRequest, res: Response) => {
   const owned = await db.select().from(projects).where(eq(projects.ownerId, req.userId!));
