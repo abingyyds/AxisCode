@@ -24,6 +24,13 @@ export function spawnAgent(opts: {
     if (opts.anthropicModel) args.push('--model', opts.anthropicModel);
     args.push('-p', opts.instruction);
 
+    const log = (content: string, logType = 'system') => {
+      db.insert(agentLogs).values({ taskId: opts.taskId, content, logType }).catch(() => {});
+      broadcastToProject(opts.projectId, { type: 'agent_log', taskId: opts.taskId, payload: { content, logType } });
+    };
+
+    log(`Spawning agent in ${opts.workspacePath}...`);
+
     const proc = spawn('claude', args, { cwd: opts.workspacePath, env });
 
     runningProcesses.set(opts.taskId, proc);
@@ -39,12 +46,14 @@ export function spawnAgent(opts: {
 
     proc.on('close', (code) => {
       runningProcesses.delete(opts.taskId);
+      log(`Agent exited with code ${code}`);
       if (code === 0) resolve();
       else reject(new Error(`Agent exited with code ${code}`));
     });
 
     proc.on('error', (err) => {
       runningProcesses.delete(opts.taskId);
+      log(`Agent spawn error: ${err.message}`);
       reject(err);
     });
   });

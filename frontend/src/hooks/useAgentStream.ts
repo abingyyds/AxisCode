@@ -1,10 +1,19 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useWebSocket } from './useWebSocket';
+import { apiFetch } from '@/lib/api';
 
 export function useAgentStream(taskId: string | null) {
   const { lastMessage } = useWebSocket();
   const [logs, setLogs] = useState<{ content: string; logType: string }[]>([]);
+
+  useEffect(() => {
+    setLogs([]);
+    if (!taskId) return;
+    apiFetch(`/api/tasks/${taskId}/logs`).then((data: { content: string; logType: string }[]) => {
+      setLogs(data);
+    }).catch(() => {});
+  }, [taskId]);
 
   useEffect(() => {
     if (!lastMessage || !taskId) return;
