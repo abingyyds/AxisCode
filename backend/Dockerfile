@@ -2,17 +2,15 @@ FROM node:20-slim
 
 RUN apt-get update && apt-get install -y git curl && rm -rf /var/lib/apt/lists/*
 
-# Install Claude CLI
 RUN npm install -g @anthropic-ai/claude-code
 
 WORKDIR /app
 
-COPY package.json ./
-RUN npm install --production
+COPY package.json tsconfig.json drizzle.config.ts ./
+COPY src/ ./src/
 
-COPY dist/ ./dist/
-COPY src/db/migrations/ ./src/db/migrations/
-COPY drizzle.config.ts ./
+RUN npm install
+RUN npx tsc
 
 RUN mkdir -p workspaces
 
