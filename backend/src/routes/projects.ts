@@ -80,12 +80,14 @@ router.delete('/:id', auth, async (req: AuthRequest, res: Response) => {
 });
 
 router.post('/:id/link-railway', auth, async (req: AuthRequest, res: Response) => {
-  const { railwayProjectId, railwayToken, railwayEnvironmentId, anthropicKey } = req.body;
+  const { railwayProjectId, railwayToken, railwayEnvironmentId, anthropicKey, anthropicBaseUrl, anthropicModel } = req.body;
   const updates: Record<string, unknown> = { updatedAt: new Date() };
   if (railwayProjectId !== undefined) updates.railwayProjectId = railwayProjectId;
   if (railwayToken !== undefined) updates.railwayToken = railwayToken;
   if (railwayEnvironmentId !== undefined) updates.railwayEnvironmentId = railwayEnvironmentId;
   if (anthropicKey !== undefined) updates.anthropicKey = anthropicKey;
+  if (anthropicBaseUrl !== undefined) updates.anthropicBaseUrl = anthropicBaseUrl;
+  if (anthropicModel !== undefined) updates.anthropicModel = anthropicModel;
   const [project] = await db.update(projects)
     .set(updates)
     .where(and(eq(projects.id, req.params.id as string), eq(projects.ownerId, req.userId!)))
@@ -107,6 +109,22 @@ router.post('/:id/env-vars', auth, async (req: AuthRequest, res: Response) => {
   if (taskId && !serviceId) return res.status(400).json({ error: 'Task has no Railway service' });
   await upsertVariables(project.railwayToken, project.railwayProjectId, project.railwayEnvironmentId, serviceId!, variables);
   res.json({ ok: true });
+});
+
+router.post('/:id/fetch-models', auth, async (req: AuthRequest, res: Response) => {
+  const [project] = await db.select().from(projects).where(eq(projects.id, req.params.id as string));
+  const apiKey = project?.anthropicKey;
+  const baseUrl = project?.anthropicBaseUrl || 'https://api.anthropic.com';
+  if (!apiKey) return res.status(400).json({ error: 'No API key configured' });
+  try {
+    const r = await fetch(`${baseUrl}/v1/models`, {
+      headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+    });
+    const data = await r.json() as { data?: { id: string }[] };
+    res.json(data.data?.map((m: { id: string }) => m.id) || []);
+  } catch {
+    res.status(500).json({ error: 'Failed to fetch models' });
+  }
 });
 
 export default router;

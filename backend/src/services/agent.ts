@@ -12,15 +12,19 @@ export function spawnAgent(opts: {
   workspacePath: string;
   instruction: string;
   anthropicKey?: string;
+  anthropicBaseUrl?: string;
+  anthropicModel?: string;
 }): Promise<void> {
   return new Promise((resolve, reject) => {
-    const env = { ...process.env, ...(opts.anthropicKey ? { ANTHROPIC_API_KEY: opts.anthropicKey } : {}) };
+    const env: Record<string, string | undefined> = { ...process.env };
+    if (opts.anthropicKey) env.ANTHROPIC_API_KEY = opts.anthropicKey;
+    if (opts.anthropicBaseUrl) env.ANTHROPIC_BASE_URL = opts.anthropicBaseUrl;
 
-    const proc = spawn('claude', [
-      '--dangerously-skip-permissions',
-      '--output-format', 'stream-json',
-      '-p', opts.instruction,
-    ], { cwd: opts.workspacePath, env });
+    const args = ['--dangerously-skip-permissions', '--output-format', 'stream-json'];
+    if (opts.anthropicModel) args.push('--model', opts.anthropicModel);
+    args.push('-p', opts.instruction);
+
+    const proc = spawn('claude', args, { cwd: opts.workspacePath, env });
 
     runningProcesses.set(opts.taskId, proc);
 

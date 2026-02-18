@@ -23,6 +23,8 @@ export const projects = pgTable('projects', {
   railwayToken: text('railway_token'),
   railwayEnvironmentId: varchar('railway_environment_id', { length: 255 }),
   anthropicKey: text('anthropic_key'),
+  anthropicBaseUrl: text('anthropic_base_url'),
+  anthropicModel: varchar('anthropic_model', { length: 255 }),
   isPublic: boolean('is_public').default(false).notNull(),
   description: text('description'),
   tags: varchar('tags', { length: 500 }),

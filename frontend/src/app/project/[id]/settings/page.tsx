@@ -12,6 +12,7 @@ export default function ProjectSettings({ params }: { params: Promise<{ id: stri
   const [envVars, setEnvVars] = useState<{ key: string; value: string }[]>([{ key: '', value: '' }]);
   const [envTaskId, setEnvTaskId] = useState('');
   const [tasks, setTasks] = useState<{ id: string; instruction: string; railwayServiceId?: string }[]>([]);
+  const [models, setModels] = useState<string[]>([]);
   const isOwner = project?.currentUserRole === 'owner';
 
   useEffect(() => {
@@ -72,15 +73,40 @@ export default function ProjectSettings({ params }: { params: Promise<{ id: stri
         )}
         {isOwner && (
           <section>
-            <h2 className="text-lg font-semibold mb-2">API Keys</h2>
+            <h2 className="text-lg font-semibold mb-2">Claude API Configuration</h2>
             <div className="space-y-2">
               <input
+                placeholder="API Base URL (default: https://api.anthropic.com)"
+                defaultValue={project.anthropicBaseUrl || ''}
+                onBlur={e => linkRailway({ anthropicBaseUrl: e.target.value })}
+                className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2"
+              />
+              <input
                 type="password"
-                placeholder={project.anthropicKey ? 'Anthropic Key (configured)' : 'Anthropic API Key (sk-ant-...)'}
+                placeholder={project.anthropicKey ? 'API Key (configured)' : 'API Key (sk-ant-...)'}
                 onBlur={e => { if (e.target.value) linkRailway({ anthropicKey: e.target.value }); e.target.value = ''; }}
                 className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2"
               />
-              <p className="text-xs text-gray-500">Project-level key. Collaborators without their own key will use this one.</p>
+              <div className="flex gap-2">
+                <select
+                  value={project.anthropicModel || ''}
+                  onChange={e => linkRailway({ anthropicModel: e.target.value })}
+                  className="flex-1 bg-gray-800 border border-gray-700 rounded px-3 py-2"
+                >
+                  <option value="">Default model</option>
+                  {models.map(m => <option key={m} value={m}>{m}</option>)}
+                </select>
+                <button
+                  onClick={async () => {
+                    try {
+                      const list = await apiFetch(`/api/projects/${id}/fetch-models`, { method: 'POST' });
+                      setModels(list);
+                    } catch { /* ignore */ }
+                  }}
+                  className="bg-gray-700 px-3 py-2 rounded hover:bg-gray-600 text-sm whitespace-nowrap"
+                >Fetch Models</button>
+              </div>
+              <p className="text-xs text-gray-500">Set API key first, then click Fetch Models to load available models.</p>
             </div>
           </section>
         )}

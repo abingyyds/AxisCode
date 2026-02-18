@@ -41,6 +41,8 @@ export async function agentWorkerProcessor(job: Job) {
       taskId, userId, projectId, workspacePath: worktreePath,
       instruction: task.instruction,
       anthropicKey: user.anthropicKey || project.anthropicKey || undefined,
+      anthropicBaseUrl: project.anthropicBaseUrl || undefined,
+      anthropicModel: project.anthropicModel || undefined,
     });
 
     // Commit and push
