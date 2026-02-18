@@ -11,13 +11,24 @@ export function useWebSocket() {
     const ws = createWS();
     if (!ws) return;
     wsRef.current = ws;
-    ws.onopen = () => {
+
+    const onMessage = (e: MessageEvent) => setLastMessage(JSON.parse(e.data));
+
+    if (ws.readyState === WebSocket.OPEN) {
+      for (const msg of queueRef.current) ws.send(msg);
+      queueRef.current = [];
+    }
+    const onOpen = () => {
       for (const msg of queueRef.current) ws.send(msg);
       queueRef.current = [];
     };
-    ws.onmessage = (e) => setLastMessage(JSON.parse(e.data));
-    ws.onclose = () => { wsRef.current = null; };
-    return () => ws.close();
+
+    ws.addEventListener('open', onOpen);
+    ws.addEventListener('message', onMessage);
+    return () => {
+      ws.removeEventListener('open', onOpen);
+      ws.removeEventListener('message', onMessage);
+    };
   }, []);
 
   const send = useCallback((data: unknown) => {
