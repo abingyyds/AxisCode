@@ -3,6 +3,6 @@ builder = "NIXPACKS"
 buildCommand = "npm install && npx next build"
 
 [deploy]
-startCommand = "node .next/standalone/server.js"
+startCommand = "npx next start -p ${PORT:-3000}"
 healthcheckPath = "/"
 restartPolicyType = "ON_FAILURE"
