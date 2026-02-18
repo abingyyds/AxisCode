@@ -40,6 +40,12 @@ export async function getPRDiff(token: string, owner: string, repo: string, prNu
   return data as unknown as string;
 }
 
+export async function getPRStatus(token: string, owner: string, repo: string, prNumber: number) {
+  const octokit = new Octokit({ auth: token });
+  const { data } = await octokit.pulls.get({ owner, repo, pull_number: prNumber });
+  return { state: data.state, merged: data.merged, mergedAt: data.merged_at };
+}
+
 export async function listRepos(token: string) {
   const octokit = new Octokit({ auth: token });
   const { data } = await octokit.repos.listForAuthenticatedUser({ sort: 'updated', per_page: 50 });

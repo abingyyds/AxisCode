@@ -8,7 +8,8 @@ import { enqueueTask } from '../queue/jobs.js';
 import { cancelAgent } from '../services/agent.js';
 import { broadcastToProject } from '../ws/handler.js';
 import { getDeploymentStatus, getDeploymentLogs, redeployService } from '../services/railway.js';
-import { projects } from '../db/schema.js';
+import { getPRStatus } from '../services/github.js';
+import { projects, users } from '../db/schema.js';
 
 const router = Router();
 
@@ -118,6 +119,27 @@ router.post('/:id/redeploy', auth, async (req: AuthRequest, res: Response) => {
   if (!project?.railwayToken || !project.railwayEnvironmentId) return res.status(400).json({ error: 'Railway not configured' });
   await redeployService(project.railwayToken, task.railwayServiceId, project.railwayEnvironmentId);
   res.json({ ok: true });
+});
+
+router.post('/:id/close', auth, async (req: AuthRequest, res: Response) => {
+  cancelAgent(req.params.id as string);
+  const [task] = await db.update(tasks)
+    .set({ status: 'closed', updatedAt: new Date() })
+    .where(eq(tasks.id, req.params.id as string))
+    .returning();
+  if (!task) return res.status(404).json({ error: 'Not found' });
+  broadcastToProject(task.projectId, { type: 'task_update', taskId: task.id, payload: { status: 'closed' } });
+  res.json(task);
+});
+
+router.get('/:id/pr-status', auth, async (req: AuthRequest, res: Response) => {
+  const [task] = await db.select().from(tasks).where(eq(tasks.id, req.params.id as string));
+  if (!task?.prNumber) return res.status(404).json({ error: 'No PR' });
+  const [project] = await db.select().from(projects).where(eq(projects.id, task.projectId));
+  const [user] = await db.select().from(users).where(eq(users.id, task.userId));
+  if (!user?.githubToken) return res.status(400).json({ error: 'No GitHub token' });
+  const status = await getPRStatus(user.githubToken, project.githubRepoOwner, project.githubRepoName, Number(task.prNumber));
+  res.json(status);
 });
 
 export default router;
