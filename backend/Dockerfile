@@ -12,7 +12,9 @@ COPY src/ ./src/
 RUN npm install
 RUN npx tsc
 
-RUN mkdir -p workspaces
+RUN mkdir -p workspaces && chown -R node:node /app
+
+USER node
 
 EXPOSE 4000
 
