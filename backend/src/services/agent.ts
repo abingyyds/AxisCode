@@ -29,11 +29,16 @@ export function spawnAgent(opts: {
       broadcastToProject(opts.projectId, { type: 'agent_log', taskId: opts.taskId, payload: { content, logType } });
     };
 
-    log(`Spawning agent in ${opts.workspacePath}...`);
+    log(`Spawning agent in ${opts.workspacePath}... (key: ${opts.anthropicKey ? 'yes' : 'NO'})`);
 
-    const proc = spawn('claude', args, { cwd: opts.workspacePath, env });
+    const proc = spawn('claude', args, { cwd: opts.workspacePath, env, stdio: ['ignore', 'pipe', 'pipe'] });
 
     runningProcesses.set(opts.taskId, proc);
+
+    const timeout = setTimeout(() => {
+      log('Agent timed out after 10 minutes');
+      proc.kill('SIGTERM');
+    }, 10 * 60 * 1000);
 
     const handleOutput = (logType: 'stdout' | 'stderr') => (data: Buffer) => {
       const content = data.toString();
@@ -45,6 +50,7 @@ export function spawnAgent(opts: {
     proc.stderr?.on('data', handleOutput('stderr'));
 
     proc.on('close', (code) => {
+      clearTimeout(timeout);
       runningProcesses.delete(opts.taskId);
       log(`Agent exited with code ${code}`);
       if (code === 0) resolve();
@@ -52,6 +58,7 @@ export function spawnAgent(opts: {
     });
 
     proc.on('error', (err) => {
+      clearTimeout(timeout);
       runningProcesses.delete(opts.taskId);
       log(`Agent spawn error: ${err.message}`);
       reject(err);
