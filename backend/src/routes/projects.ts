@@ -5,7 +5,7 @@ import { projects, collaborators, users } from '../db/schema.js';
 import { auth, optionalAuth } from '../middleware/auth.js';
 import { AuthRequest } from '../types/index.js';
 import { listRepos } from '../services/github.js';
-import { upsertVariables } from '../services/railway.js';
+import { upsertVariables, getEnvironments, getServices } from '../services/railway.js';
 
 const router = Router();
 
@@ -125,6 +125,24 @@ router.post('/:id/fetch-models', auth, async (req: AuthRequest, res: Response) =
   } catch {
     res.status(500).json({ error: 'Failed to fetch models' });
   }
+});
+
+router.post('/:id/railway-environments', auth, async (req: AuthRequest, res: Response) => {
+  const [project] = await db.select().from(projects).where(eq(projects.id, req.params.id as string));
+  if (!project?.railwayToken || !project.railwayProjectId) return res.status(400).json({ error: 'Railway not configured' });
+  try {
+    const envs = await getEnvironments(project.railwayToken, project.railwayProjectId);
+    res.json(envs);
+  } catch { res.status(500).json({ error: 'Failed to fetch environments' }); }
+});
+
+router.post('/:id/railway-services', auth, async (req: AuthRequest, res: Response) => {
+  const [project] = await db.select().from(projects).where(eq(projects.id, req.params.id as string));
+  if (!project?.railwayToken || !project.railwayProjectId) return res.status(400).json({ error: 'Railway not configured' });
+  try {
+    const svcs = await getServices(project.railwayToken, project.railwayProjectId);
+    res.json(svcs);
+  } catch { res.status(500).json({ error: 'Failed to fetch services' }); }
 });
 
 export default router;

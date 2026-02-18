@@ -13,6 +13,8 @@ export default function ProjectSettings({ params }: { params: Promise<{ id: stri
   const [envTaskId, setEnvTaskId] = useState('');
   const [tasks, setTasks] = useState<{ id: string; instruction: string; railwayServiceId?: string }[]>([]);
   const [models, setModels] = useState<string[]>([]);
+  const [railwayEnvs, setRailwayEnvs] = useState<{ id: string; name: string }[]>([]);
+  const [railwaySvcs, setRailwaySvcs] = useState<{ id: string; name: string }[]>([]);
   const isOwner = project?.currentUserRole === 'owner';
 
   useEffect(() => {
@@ -126,13 +128,23 @@ export default function ProjectSettings({ params }: { params: Promise<{ id: stri
                 onBlur={e => { if (e.target.value) linkRailway({ railwayToken: e.target.value }); e.target.value = ''; }}
                 className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2"
               />
-              <input
-                placeholder="Railway Environment ID"
-                defaultValue={project.railwayEnvironmentId || ''}
-                onBlur={e => linkRailway({ railwayEnvironmentId: e.target.value })}
-                className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2"
-              />
-              <p className="text-xs text-gray-500">Set once by the project owner. All collaborators&apos; deployments use this token.</p>
+              <div className="flex gap-2">
+                <select
+                  value={project.railwayEnvironmentId || ''}
+                  onChange={e => linkRailway({ railwayEnvironmentId: e.target.value })}
+                  className="flex-1 bg-gray-800 border border-gray-700 rounded px-3 py-2"
+                >
+                  <option value="">Select environment...</option>
+                  {railwayEnvs.map(e => <option key={e.id} value={e.id}>{e.name} ({e.id.slice(0, 8)})</option>)}
+                </select>
+                <button
+                  onClick={async () => {
+                    try { setRailwayEnvs(await apiFetch(`/api/projects/${id}/railway-environments`, { method: 'POST' })); } catch {}
+                  }}
+                  className="bg-gray-700 px-3 py-2 rounded hover:bg-gray-600 text-sm whitespace-nowrap"
+                >Fetch</button>
+              </div>
+              <p className="text-xs text-gray-500">Set Project ID and Token first, then fetch environments. All collaborators&apos; deployments use this config.</p>
             </div>
           </section>
         )}

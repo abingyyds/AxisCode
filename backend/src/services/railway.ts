@@ -11,6 +11,28 @@ async function railwayGQL(token: string, query: string, variables = {}) {
   return json.data;
 }
 
+export async function getEnvironments(token: string, projectId: string) {
+  const data = await railwayGQL(token, `
+    query($id: String!) {
+      project(id: $id) {
+        environments { edges { node { id name } } }
+      }
+    }
+  `, { id: projectId }) as { project: { environments: { edges: { node: { id: string; name: string } }[] } } };
+  return data.project.environments.edges.map(e => e.node);
+}
+
+export async function getServices(token: string, projectId: string) {
+  const data = await railwayGQL(token, `
+    query($id: String!) {
+      project(id: $id) {
+        services { edges { node { id name } } }
+      }
+    }
+  `, { id: projectId }) as { project: { services: { edges: { node: { id: string; name: string } }[] } } };
+  return data.project.services.edges.map(e => e.node);
+}
+
 export async function createService(token: string, projectId: string, name: string, repo: string, branch: string) {
   const data = await railwayGQL(token, `
     mutation($input: ServiceCreateInput!) {
