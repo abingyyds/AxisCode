@@ -1,0 +1,7 @@
+{
+  "name": "shared",
+  "version": "0.0.1",
+  "main": "src/types.ts",
+  "scripts": { "build": "tsc" },
+  "devDependencies": { "typescript": "^5.7.0" }
+}
