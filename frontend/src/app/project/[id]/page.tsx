@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import { isLoggedIn } from '@/lib/auth';
 import { useWebSocket } from '@/hooks/useWebSocket';
+import Link from 'next/link';
 import Navbar from '@/components/layout/Navbar';
 import Sidebar from '@/components/layout/Sidebar';
 import TaskInput from '@/components/agent/TaskInput';
@@ -59,7 +60,12 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
       <div className="flex flex-1">
         <Sidebar tasks={tasks} activeTask={activeTask} onSelect={setActiveTask} />
         <main className="flex-1 p-6 flex flex-col gap-4">
-          <TaskInput onSubmit={onSubmit} />
+          <div className="flex justify-between items-center">
+            <TaskInput onSubmit={onSubmit} />
+            <Link href={`/project/${id}/settings`} className="text-gray-400 hover:text-white text-sm ml-4 whitespace-nowrap">
+              Settings
+            </Link>
+          </div>
           {activeTask && (
             <>
               <AgentTerminal taskId={activeTask.id} />
