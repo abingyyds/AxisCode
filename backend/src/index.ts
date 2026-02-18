@@ -18,7 +18,8 @@ createWorker('tasks', agentWorkerProcessor);
 createWorker('cleanup', cleanupWorkerProcessor);
 
 const app = express();
-app.use(cors({ origin: config.frontendUrl, credentials: true }));
+const frontendOrigin = config.frontendUrl.replace(/\/+$/, '');
+app.use(cors({ origin: frontendOrigin, credentials: true }));
 app.use(express.json());
 app.use(rateLimit());
 

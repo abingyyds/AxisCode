@@ -1,4 +1,4 @@
-const API = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000';
+const API = (process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000').replace(/\/+$/, '');
 
 export async function apiFetch(path: string, opts: RequestInit = {}) {
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
