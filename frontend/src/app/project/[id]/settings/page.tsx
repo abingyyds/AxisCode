@@ -33,7 +33,7 @@ export default function ProjectSettings({ params }: { params: Promise<{ id: stri
       method: 'POST',
       body: JSON.stringify(data),
     });
-    setProject(updated);
+    setProject((prev: Record<string, any> | null) => ({ ...prev, ...updated }));
   };
 
   if (!project) return null;
