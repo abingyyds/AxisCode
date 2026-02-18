@@ -7,17 +7,30 @@ import InviteModal from '@/components/collaborators/InviteModal';
 
 export default function ProjectSettings({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const [project, setProject] = useState<Record<string, string> | null>(null);
+  const [project, setProject] = useState<Record<string, any> | null>(null);
   const [showInvite, setShowInvite] = useState(false);
+  const [envVars, setEnvVars] = useState<{ key: string; value: string }[]>([{ key: '', value: '' }]);
+  const [envTaskId, setEnvTaskId] = useState('');
+  const [tasks, setTasks] = useState<{ id: string; instruction: string; railwayServiceId?: string }[]>([]);
+  const isOwner = project?.currentUserRole === 'owner';
 
   useEffect(() => {
     apiFetch(`/api/projects/${id}`).then(setProject).catch(() => {});
+    apiFetch(`/api/tasks/project/${id}`).then(setTasks).catch(() => {});
   }, [id]);
 
-  const linkRailway = async (railwayProjectId: string) => {
+  const updateProject = async (data: Record<string, unknown>) => {
+    const updated = await apiFetch(`/api/projects/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+    setProject((prev: Record<string, any> | null) => ({ ...prev, ...updated }));
+  };
+
+  const linkRailway = async (data: Record<string, string>) => {
     const updated = await apiFetch(`/api/projects/${id}/link-railway`, {
       method: 'POST',
-      body: JSON.stringify({ railwayProjectId }),
+      body: JSON.stringify(data),
     });
     setProject(updated);
   };
@@ -29,25 +42,135 @@ export default function ProjectSettings({ params }: { params: Promise<{ id: stri
       <Navbar />
       <main className="max-w-3xl mx-auto p-6 space-y-8">
         <h1 className="text-2xl font-bold">Project Settings</h1>
-        <section>
-          <h2 className="text-lg font-semibold mb-2">Railway Integration</h2>
-          <div className="flex gap-2">
-            <input
-              placeholder="Railway Project ID"
-              defaultValue={project.railwayProjectId || ''}
-              onBlur={e => linkRailway(e.target.value)}
-              className="bg-gray-800 border border-gray-700 rounded px-3 py-2 flex-1"
-            />
-          </div>
-        </section>
+        {isOwner && (
+          <section>
+            <h2 className="text-lg font-semibold mb-2">Project Plaza</h2>
+            <div className="space-y-3">
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={!!project.isPublic}
+                  onChange={e => updateProject({ isPublic: e.target.checked })}
+                />
+                Public (visible on Project Plaza)
+              </label>
+              <textarea
+                placeholder="Project description"
+                defaultValue={project.description || ''}
+                onBlur={e => updateProject({ description: e.target.value })}
+                className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm"
+                rows={2}
+              />
+              <input
+                placeholder="Tags (comma-separated)"
+                defaultValue={project.tags || ''}
+                onBlur={e => updateProject({ tags: e.target.value })}
+                className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm"
+              />
+            </div>
+          </section>
+        )}
+        {isOwner && (
+          <section>
+            <h2 className="text-lg font-semibold mb-2">API Keys</h2>
+            <div className="space-y-2">
+              <input
+                type="password"
+                placeholder={project.anthropicKey ? 'Anthropic Key (configured)' : 'Anthropic API Key (sk-ant-...)'}
+                onBlur={e => { if (e.target.value) linkRailway({ anthropicKey: e.target.value }); e.target.value = ''; }}
+                className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2"
+              />
+              <p className="text-xs text-gray-500">Project-level key. Collaborators without their own key will use this one.</p>
+            </div>
+          </section>
+        )}
+        {isOwner && (
+          <section>
+            <h2 className="text-lg font-semibold mb-2">Railway Integration</h2>
+            <div className="space-y-2">
+              <input
+                placeholder="Railway Project ID"
+                defaultValue={project.railwayProjectId || ''}
+                onBlur={e => linkRailway({ railwayProjectId: e.target.value })}
+                className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2"
+              />
+              <input
+                type="password"
+                placeholder={project.railwayToken ? 'Railway Token (configured)' : 'Railway Token'}
+                onBlur={e => { if (e.target.value) linkRailway({ railwayToken: e.target.value }); e.target.value = ''; }}
+                className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2"
+              />
+              <input
+                placeholder="Railway Environment ID"
+                defaultValue={project.railwayEnvironmentId || ''}
+                onBlur={e => linkRailway({ railwayEnvironmentId: e.target.value })}
+                className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2"
+              />
+              <p className="text-xs text-gray-500">Set once by the project owner. All collaborators&apos; deployments use this token.</p>
+            </div>
+          </section>
+        )}
+        {isOwner && (
+          <section>
+            <h2 className="text-lg font-semibold mb-2">Environment Variables</h2>
+            <div className="space-y-2">
+              <select
+                value={envTaskId}
+                onChange={e => setEnvTaskId(e.target.value)}
+                className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm"
+              >
+                <option value="">Select a task...</option>
+                {tasks.filter(t => t.railwayServiceId).map(t => (
+                  <option key={t.id} value={t.id}>{t.instruction.slice(0, 60)}</option>
+                ))}
+              </select>
+              {envVars.map((v, i) => (
+                <div key={i} className="flex gap-2">
+                  <input
+                    placeholder="KEY"
+                    value={v.key}
+                    onChange={e => setEnvVars(prev => prev.map((p, j) => j === i ? { ...p, key: e.target.value } : p))}
+                    className="flex-1 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm"
+                  />
+                  <input
+                    placeholder="value"
+                    value={v.value}
+                    onChange={e => setEnvVars(prev => prev.map((p, j) => j === i ? { ...p, value: e.target.value } : p))}
+                    className="flex-1 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm"
+                  />
+                </div>
+              ))}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setEnvVars(prev => [...prev, { key: '', value: '' }])}
+                  className="text-sm text-blue-400 hover:text-blue-300"
+                >+ Add row</button>
+                <button
+                  onClick={async () => {
+                    const variables: Record<string, string> = {};
+                    envVars.forEach(v => { if (v.key) variables[v.key] = v.value; });
+                    if (!Object.keys(variables).length || !envTaskId) return;
+                    await apiFetch(`/api/projects/${id}/env-vars`, {
+                      method: 'POST',
+                      body: JSON.stringify({ variables, taskId: envTaskId }),
+                    });
+                  }}
+                  className="bg-blue-600 px-3 py-1 rounded hover:bg-blue-700 text-sm"
+                >Push to Railway</button>
+              </div>
+            </div>
+          </section>
+        )}
         <section>
           <div className="flex justify-between items-center mb-2">
             <h2 className="text-lg font-semibold">Collaborators</h2>
-            <button onClick={() => setShowInvite(true)} className="bg-blue-600 px-3 py-1 rounded hover:bg-blue-700 text-sm">
-              Invite
-            </button>
+            {isOwner && (
+              <button onClick={() => setShowInvite(true)} className="bg-blue-600 px-3 py-1 rounded hover:bg-blue-700 text-sm">
+                Invite
+              </button>
+            )}
           </div>
-          <CollaboratorList projectId={id} />
+          <CollaboratorList projectId={id} isOwner={isOwner} />
         </section>
         {showInvite && <InviteModal projectId={id} onClose={() => setShowInvite(false)} />}
       </main>

@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uuid, varchar } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, uuid, varchar, boolean, integer } from 'drizzle-orm/pg-core';
 
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -8,7 +8,6 @@ export const users = pgTable('users', {
   avatarUrl: text('avatar_url'),
   githubToken: text('github_token'),
   anthropicKey: text('anthropic_key'),
-  railwayToken: text('railway_token'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -21,6 +20,12 @@ export const projects = pgTable('projects', {
   githubRepoUrl: text('github_repo_url').notNull(),
   defaultBranch: varchar('default_branch', { length: 100 }).default('main').notNull(),
   railwayProjectId: varchar('railway_project_id', { length: 255 }),
+  railwayToken: text('railway_token'),
+  railwayEnvironmentId: varchar('railway_environment_id', { length: 255 }),
+  anthropicKey: text('anthropic_key'),
+  isPublic: boolean('is_public').default(false).notNull(),
+  description: text('description'),
+  tags: varchar('tags', { length: 500 }),
   ownerId: uuid('owner_id').notNull().references(() => users.id),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
@@ -47,9 +52,20 @@ export const tasks = pgTable('tasks', {
   previewUrl: text('preview_url'),
   agentType: varchar('agent_type', { length: 20 }).default('worker'),
   errorMessage: text('error_message'),
+  railwayServiceId: varchar('railway_service_id', { length: 255 }),
   workspacePath: text('workspace_path'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const contributions = pgTable('contributions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  projectId: uuid('project_id').notNull().references(() => projects.id),
+  userId: uuid('user_id').notNull().references(() => users.id),
+  taskId: uuid('task_id').notNull().references(() => tasks.id),
+  score: integer('score'),
+  summary: text('summary'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
 export const agentLogs = pgTable('agent_logs', {

@@ -2,9 +2,10 @@ import { Router, Response } from 'express';
 import { eq, and } from 'drizzle-orm';
 import { db } from '../db/client.js';
 import { projects, collaborators, users } from '../db/schema.js';
-import { auth } from '../middleware/auth.js';
+import { auth, optionalAuth } from '../middleware/auth.js';
 import { AuthRequest } from '../types/index.js';
 import { listRepos } from '../services/github.js';
+import { upsertVariables } from '../services/railway.js';
 
 const router = Router();
 
@@ -16,16 +17,15 @@ router.get('/github-repos', auth, async (req: AuthRequest, res: Response) => {
 });
 
 router.get('/', auth, async (req: AuthRequest, res: Response) => {
-  const owned = await db.select().from(projects).where(eq(projects.ownerId, req.userId!));
-  const collabs = await db.select({ project: projects })
+  const result = await db.select({ project: projects })
     .from(collaborators)
     .innerJoin(projects, eq(collaborators.projectId, projects.id))
     .where(eq(collaborators.userId, req.userId!));
-  res.json([...owned, ...collabs.map(c => c.project)]);
+  res.json(result.map(r => r.project));
 });
 
 router.post('/', auth, async (req: AuthRequest, res: Response) => {
-  const { name, githubRepoOwner, githubRepoName, githubRepoUrl, defaultBranch } = req.body;
+  const { name, githubRepoOwner, githubRepoName, githubRepoUrl, defaultBranch, isPublic, description, tags } = req.body;
   const [project] = await db.insert(projects).values({
     name,
     githubRepoOwner,
@@ -33,21 +33,39 @@ router.post('/', auth, async (req: AuthRequest, res: Response) => {
     githubRepoUrl,
     defaultBranch: defaultBranch || 'main',
     ownerId: req.userId!,
+    ...(isPublic !== undefined && { isPublic }),
+    ...(description && { description }),
+    ...(tags && { tags }),
   }).returning();
+  await db.insert(collaborators).values({
+    projectId: project.id,
+    userId: req.userId!,
+    role: 'owner',
+    acceptedAt: new Date(),
+  });
   res.status(201).json(project);
 });
 
-router.get('/:id', auth, async (req: AuthRequest, res: Response) => {
+router.get('/:id', optionalAuth, async (req: AuthRequest, res: Response) => {
   const [project] = await db.select().from(projects).where(eq(projects.id, req.params.id as string));
   if (!project) return res.status(404).json({ error: 'Not found' });
-  res.json(project);
+  if (!project.isPublic && !req.userId) return res.status(401).json({ error: 'Unauthorized' });
+  const [collab] = req.userId
+    ? await db.select().from(collaborators)
+        .where(and(eq(collaborators.projectId, project.id), eq(collaborators.userId, req.userId)))
+    : [undefined];
+  if (!project.isPublic && !collab) return res.status(403).json({ error: 'Forbidden' });
+  res.json({ ...project, currentUserRole: collab?.role || null });
 });
 
 router.patch('/:id', auth, async (req: AuthRequest, res: Response) => {
-  const { name, railwayProjectId } = req.body;
+  const { name, railwayProjectId, isPublic, description, tags } = req.body;
   const updates: Record<string, unknown> = { updatedAt: new Date() };
   if (name) updates.name = name;
   if (railwayProjectId) updates.railwayProjectId = railwayProjectId;
+  if (isPublic !== undefined) updates.isPublic = isPublic;
+  if (description !== undefined) updates.description = description;
+  if (tags !== undefined) updates.tags = tags;
   const [project] = await db.update(projects).set(updates)
     .where(and(eq(projects.id, req.params.id as string), eq(projects.ownerId, req.userId!)))
     .returning();
@@ -62,13 +80,33 @@ router.delete('/:id', auth, async (req: AuthRequest, res: Response) => {
 });
 
 router.post('/:id/link-railway', auth, async (req: AuthRequest, res: Response) => {
-  const { railwayProjectId } = req.body;
+  const { railwayProjectId, railwayToken, railwayEnvironmentId, anthropicKey } = req.body;
+  const updates: Record<string, unknown> = { updatedAt: new Date() };
+  if (railwayProjectId !== undefined) updates.railwayProjectId = railwayProjectId;
+  if (railwayToken !== undefined) updates.railwayToken = railwayToken;
+  if (railwayEnvironmentId !== undefined) updates.railwayEnvironmentId = railwayEnvironmentId;
+  if (anthropicKey !== undefined) updates.anthropicKey = anthropicKey;
   const [project] = await db.update(projects)
-    .set({ railwayProjectId, updatedAt: new Date() })
+    .set(updates)
     .where(and(eq(projects.id, req.params.id as string), eq(projects.ownerId, req.userId!)))
     .returning();
   if (!project) return res.status(404).json({ error: 'Not found' });
   res.json(project);
+});
+
+router.post('/:id/env-vars', auth, async (req: AuthRequest, res: Response) => {
+  const { variables, taskId } = req.body;
+  if (!variables || typeof variables !== 'object') return res.status(400).json({ error: 'Missing variables' });
+  const [project] = await db.select().from(projects).where(eq(projects.id, req.params.id as string));
+  if (!project?.railwayToken || !project.railwayProjectId || !project.railwayEnvironmentId) {
+    return res.status(400).json({ error: 'Railway not configured' });
+  }
+  const { tasks } = await import('../db/schema.js');
+  const [task] = taskId ? await db.select().from(tasks).where(eq(tasks.id, taskId)) : [null];
+  const serviceId = task?.railwayServiceId;
+  if (taskId && !serviceId) return res.status(400).json({ error: 'Task has no Railway service' });
+  await upsertVariables(project.railwayToken, project.railwayProjectId, project.railwayEnvironmentId, serviceId!, variables);
+  res.json({ ok: true });
 });
 
 export default router;
