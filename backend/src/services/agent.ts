@@ -20,7 +20,7 @@ export function spawnAgent(opts: {
     if (opts.anthropicKey) env.ANTHROPIC_API_KEY = opts.anthropicKey;
     if (opts.anthropicBaseUrl) env.ANTHROPIC_BASE_URL = opts.anthropicBaseUrl;
 
-    const args = ['--dangerously-skip-permissions', '--output-format', 'stream-json'];
+    const args = ['--dangerously-skip-permissions', '--output-format', 'stream-json', '--verbose'];
     if (opts.anthropicModel) args.push('--model', opts.anthropicModel);
     args.push('-p', opts.instruction);
 
